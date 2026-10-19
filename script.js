@@ -48,10 +48,13 @@ const requested = new URLSearchParams(location.search).get('product');
 if (requested && productSelect) productSelect.value = requested;
 
 // Quote / contact form
-// Messages are emailed to you through FormSubmit (formsubmit.co); the address is never shown on the page.
-// The first submission sends an activation email. After you click "Activate", FormSubmit gives you a
-// random ID: put it in place of the email below so the address isn't in the page source either.
-const FORM_ENDPOINT = 'https://formsubmit.co/ajax/connorjmsavage1@icloud.com';
+// No key or account needed.
+// Online: the message is emailed to you through FormSubmit (formsubmit.co). The very first message
+// sends you an "Activate Form" email; click it once and every message after that arrives directly.
+// Opened as a file (no server): FormSubmit refuses those pages, so the visitor's email app opens
+// with the message already written. If sending online ever fails, it falls back to the same thing.
+// The address is stored encoded so it isn't shown on the page or sitting in the code as plain text.
+const INBOX = atob('Y29ubm9yam1zYXZhZ2UxQGljbG91ZC5jb20=');
 const form = document.getElementById('quote-form');
 const status = document.getElementById('form-status');
 const submitBtn = form?.querySelector('button[type="submit"]');
@@ -79,6 +82,17 @@ function collect() {
   };
 }
 
+function openEmailApp(m) {
+  const subject = `Quote request: ${m.product}, ${m.quantity}`;
+  const body = [
+    `Name: ${m.name}`, `Company: ${m.company}`, `Email: ${m.email}`,
+    `Product: ${m.product}`, `Quantity: ${m.quantity}`, `Extras: ${m.extras}`, '', m.message,
+  ].join('\n');
+  window.location.href = `mailto:${INBOX}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  status.textContent = 'Your email app is opening with your message written. Press send to finish.';
+  status.className = 'form-status ok';
+}
+
 form?.addEventListener('submit', async e => {
   e.preventDefault();
   if (form.elements._honey.value) return; // bot
@@ -89,20 +103,19 @@ form?.addEventListener('submit', async e => {
     return;
   }
 
-  // FormSubmit refuses pages opened straight from disk (file://). It works once the site is online.
+  const m = collect();
+
   if (location.protocol === 'file:') {
-    status.textContent = "The form can't send from a page opened as a file. It works once the site is online, or when previewed through a local server.";
-    status.className = 'form-status err';
+    openEmailApp(m);
     return;
   }
 
-  const m = collect();
   submitBtn.disabled = true;
   submitBtn.textContent = 'Sending…';
   status.textContent = '';
 
   try {
-    const res = await fetch(FORM_ENDPOINT, {
+    const res = await fetch(`https://formsubmit.co/ajax/${INBOX}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
@@ -113,15 +126,14 @@ form?.addEventListener('submit', async e => {
       }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || String(data.success) !== 'true') throw new Error(data.message || 'Send failed');
+    if (!res.ok || String(data.success) !== 'true') throw new Error(data.message || `Send failed (${res.status})`);
 
     status.textContent = "Thanks! Your message was sent. We'll reply within one business day.";
     status.className = 'form-status ok';
     form.reset();
   } catch (err) {
-    console.error('Form send failed:', err);
-    status.textContent = "Sorry, your message didn't send. Please try again in a minute.";
-    status.className = 'form-status err';
+    console.error('Form send failed, opening email app instead:', err);
+    openEmailApp(m);
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Send message';
