@@ -89,6 +89,13 @@ form?.addEventListener('submit', async e => {
     return;
   }
 
+  // FormSubmit refuses pages opened straight from disk (file://). It works once the site is online.
+  if (location.protocol === 'file:') {
+    status.textContent = "The form can't send from a page opened as a file. It works once the site is online, or when previewed through a local server.";
+    status.className = 'form-status err';
+    return;
+  }
+
   const m = collect();
   submitBtn.disabled = true;
   submitBtn.textContent = 'Sending…';
@@ -111,7 +118,8 @@ form?.addEventListener('submit', async e => {
     status.textContent = "Thanks! Your message was sent. We'll reply within one business day.";
     status.className = 'form-status ok';
     form.reset();
-  } catch {
+  } catch (err) {
+    console.error('Form send failed:', err);
     status.textContent = "Sorry, your message didn't send. Please try again in a minute.";
     status.className = 'form-status err';
   } finally {
