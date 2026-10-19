@@ -232,6 +232,8 @@ p { margin: 0; }
 .form-status { font-size: 14px; min-height: 1.4em; color: var(--ink-2); }
 .form-status.ok { color: #157f3b; }
 .form-status.err { color: var(--accent); }
+.send-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: -6px; }
+.send-options[hidden] { display: none; }
 
 /* Footer */
 .footer { border-top: 1px solid var(--line); padding: 40px 0; }

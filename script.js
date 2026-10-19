@@ -82,14 +82,34 @@ function collect() {
   };
 }
 
+// Used when the message can't be sent directly. A plain mailto link does nothing on computers
+// with no email app set up, so the visitor also gets Gmail, Outlook and copy options.
+const sendOptions = document.getElementById('send-options');
+
 function openEmailApp(m) {
   const subject = `Quote request: ${m.product}, ${m.quantity}`;
   const body = [
     `Name: ${m.name}`, `Company: ${m.company}`, `Email: ${m.email}`,
     `Product: ${m.product}`, `Quantity: ${m.quantity}`, `Extras: ${m.extras}`, '', m.message,
   ].join('\n');
-  window.location.href = `mailto:${INBOX}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  status.textContent = 'Your email app is opening with your message written. Press send to finish.';
+  const to = encodeURIComponent(INBOX), su = encodeURIComponent(subject), bo = encodeURIComponent(body);
+
+  document.getElementById('send-gmail').href = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${su}&body=${bo}`;
+  document.getElementById('send-outlook').href = `https://outlook.live.com/mail/0/deeplink/compose?to=${to}&subject=${su}&body=${bo}`;
+  document.getElementById('send-app').href = `mailto:${INBOX}?subject=${su}&body=${bo}`;
+  document.getElementById('send-copy').onclick = async () => {
+    const text = `To: ${INBOX}\nSubject: ${subject}\n\n${body}`;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const t = Object.assign(document.createElement('textarea'), { value: text });
+      document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+    }
+    status.textContent = 'Copied. Paste it into a new email to send it to us.';
+  };
+
+  sendOptions.hidden = false;
+  status.textContent = 'Your message is ready. Choose how to send it:';
   status.className = 'form-status ok';
 }
 
@@ -110,6 +130,7 @@ form?.addEventListener('submit', async e => {
     return;
   }
 
+  sendOptions.hidden = true;
   submitBtn.disabled = true;
   submitBtn.textContent = 'Sending…';
   status.textContent = '';
